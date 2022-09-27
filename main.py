@@ -6,6 +6,7 @@
 # and to search on reddit
 import asyncio
 import datetime
+import logging
 import os
 import random
 import re
@@ -19,7 +20,7 @@ import pyowm
 import requests
 import openai
 import wandb
-
+import pornhub
 from discord import client
 from discord.app_commands import commands
 from dotenv import load_dotenv
@@ -33,13 +34,13 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 print(APIKEY)
 OpenWMap = pyowm.OWM(APIKEY)
 base_url = "http://api.openweathermap.org/data/2.5/weather?"
-
 intent = discord.Intents.default()
 intent.members = True
 intent.message_content = True
 intent.messages = True
 intent.voice_states = True
 client = discord.Client(intents=intent)
+logging.basicConfig(filename="MessageLog.log", level=logging.INFO)
 
 FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
                   'options': '-vn'}
@@ -67,6 +68,8 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+    # log the message and the author
+    logging.info(f"{message.author}: {message.content}")
     if message.author == client.user:
         return
     print(message.content)
@@ -74,6 +77,20 @@ async def on_message(message):
 
 
 async def manage_message(message):
+    # get the nickname of the user
+    # check if the user is the root user
+    if message.author.id == 282438931977338880:
+        if message.content.startswith("!shutdown"):
+            await message.channel.send("Shutting down")
+            await client.close()
+        if message.content.startswith("!restart"):
+            await message.channel.send("Restarting")
+            await client.close()
+            os.system("python main.py")
+
+        if message.content.startswith("!selfdestruct"):
+            await selfdestruct(message)
+
     if message.content.startswith('!weather'):
         await weather(message)
     if message.content.startswith('!reddit'):
@@ -84,8 +101,51 @@ async def manage_message(message):
         await youtube(message)
     if message.content.startswith('!jarvis'):
         await gpt3(message)
+    if message.content.startswith('!pornhub'):
+        await pornhubHandler(message)
     if message.content.startswith('!help'):
         await help_message(message)
+
+
+async def selfdestruct(message):
+    await message.channel.send(embed=discord.Embed(title="Self-destructing in 3 seconds", color=0xff0000))
+    await asyncio.sleep(1)
+    await message.channel.send(embed=discord.Embed(title="Self-destructing in 2 seconds", color=0xff0000))
+    await asyncio.sleep(1)
+    await message.channel.send(embed=discord.Embed(title="Self-destructing in 1 seconds", color=0xff0000))
+    await asyncio.sleep(1)
+    await message.channel.send(embed=discord.Embed(title="Goodbye", color=0xff0000))
+    #check if the channel contains a message if not purge it in a loop
+    while True:
+        try:
+            await message.channel.purge(limit=100,bulk=True)
+            await asyncio.sleep(5)
+        except:
+            break
+    await message.channel.send(embed=discord.Embed(title="Self-destructed", color=0xff0000))
+
+
+
+
+
+
+
+
+
+
+
+async def pornhubHandler(message):
+    search = message.content[8:]
+    videos = ""
+    videos = pornhub.PornHub(search)
+    videos = videos.getVideos(1, 1)
+    embed = discord.Embed()
+    for video in videos:
+        embed.title = video['name']
+        embed.url = video['url']
+        embed.set_image(url=video['background'])
+
+    await message.channel.send(embed=embed)
 
 
 async def gpt3(message):
@@ -95,6 +155,7 @@ async def gpt3(message):
         prompt=gpt_prompt,
         temperature=0.5,
         top_p=1.0,
+        max_tokens=300,
         frequency_penalty=0.0,
         presence_penalty=0.0
     )
@@ -128,7 +189,11 @@ async def youtube(message):
     if hasattr(message.author.voice, 'channel'):
         voice_channel = message.author.voice.channel
         # join the voice channel
-        voice = await voice_channel.connect()
+        # check if the bot is already in a voice channel
+        if not client.voice_clients:
+            voice = await voice_channel.connect()
+        else:
+            voice = client.voice_clients[0]
         # play the audio
         voice.play(discord.FFmpegPCMAudio(executable="C:/ffmpeg/bin/ffmpeg.exe", source=url, **FFMPEG_OPTIONS))
         # disconnect after the player has finished
@@ -138,9 +203,6 @@ async def youtube(message):
         embed = discord.Embed(title="You are not connected to a voice channel", color=0xff0000)
         embed.description = "Please join a voice channel and try again"
         await message.channel.send(embed=embed)
-
-
-
 
 
 async def weather(message):
