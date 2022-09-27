@@ -88,8 +88,8 @@ async def manage_message(message):
             await client.close()
             os.system("python main.py")
 
-        if message.content.startswith("!selfdestruct"):
-            await selfdestruct(message)
+        if message.content.startswith("!purge"):
+            await purger(message)
 
     if message.content.startswith('!weather'):
         await weather(message)
@@ -107,7 +107,7 @@ async def manage_message(message):
         await help_message(message)
 
 
-async def selfdestruct(message):
+async def purger(message):
     await message.channel.send(embed=discord.Embed(title="Self-destructing in 3 seconds", color=0xff0000))
     await asyncio.sleep(1)
     await message.channel.send(embed=discord.Embed(title="Self-destructing in 2 seconds", color=0xff0000))
@@ -115,14 +115,8 @@ async def selfdestruct(message):
     await message.channel.send(embed=discord.Embed(title="Self-destructing in 1 seconds", color=0xff0000))
     await asyncio.sleep(1)
     await message.channel.send(embed=discord.Embed(title="Goodbye", color=0xff0000))
-    #check if the channel contains a message if not purge it in a loop
-    while True:
-        try:
-            await message.channel.purge(limit=100,bulk=True)
-            await asyncio.sleep(5)
-        except:
-            break
-    await message.channel.send(embed=discord.Embed(title="Self-destructed", color=0xff0000))
+    await message.channel.purge(limit=None, check=lambda msg: not msg.pinned)
+
 
 
 
