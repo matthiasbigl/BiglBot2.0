@@ -20,7 +20,6 @@ import pyowm
 import requests
 import openai
 import wandb
-import pornhub
 from discord import client
 from discord.app_commands import commands
 from dotenv import load_dotenv
@@ -101,8 +100,6 @@ async def manage_message(message):
         await youtube(message)
     if message.content.startswith('!jarvis'):
         await gpt3(message)
-    if message.content.startswith('!pornhub'):
-        await pornhubHandler(message)
     if message.content.startswith('!help'):
         await help_message(message)
 
@@ -121,25 +118,6 @@ async def purger(message):
 
 
 
-
-
-
-
-
-
-
-async def pornhubHandler(message):
-    search = message.content[8:]
-    videos = ""
-    videos = pornhub.PornHub(search)
-    videos = videos.getVideos(1, 1)
-    embed = discord.Embed()
-    for video in videos:
-        embed.title = video['name']
-        embed.url = video['url']
-        embed.set_image(url=video['background'])
-
-    await message.channel.send(embed=embed)
 
 
 async def gpt3(message):
